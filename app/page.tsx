@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 export default function Home() {
+    // Code for sending message to AI model
     const [message, setMessage] = useState<string>("Loading...");
     async function getMessage() {
         const response = await fetch("/api/sendMessage");
@@ -15,6 +16,7 @@ export default function Home() {
         const response = getMessage();
     })
 
+    // Get message from user (speech-to-text)
     const [transcript, setTranscript] = useState('');
     const startListening = () => {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -51,7 +53,8 @@ export default function Home() {
 
       recognition.start();
     };
-
+    
+    // Give user message from AI model (text-to-speech)
     const startSpeaking = () => {
       if ('speechSynthesis' in window) {
         const utterance = new SpeechSynthesisUtterance(transcript);
@@ -74,9 +77,6 @@ export default function Home() {
           Text-to-speech
         </button>
       </div>
-      <Link href='/calculator'>
-        Calculator
-      </Link>
     </main>
 
   );
