@@ -25,19 +25,41 @@ export default function Home() {
 
       const recognition = new SpeechRecognition();
       recognition.lang = 'en-US';
-      recognition.interimResults = true;
+      recognition.interimResults = false;
+      recognition.continuous = true;
 
       recognition.onresult = (event: any) => {
-        const speechResult = event.results[0][0].transcript;
-        setTranscript(speechResult);
-        console.log('Transcript:', speechResult);
+        let fullTranscript = '';
+        for (let i = 0; i < event.results.length; i++) {
+          if (event.results[i].isFinal) {
+            const speechResult = event.results[i][0].transcript;
+            fullTranscript += speechResult;
+            setTranscript(fullTranscript.trim());
+            console.log('Transcript:', speechResult);
+          }
+        }
       };
 
       recognition.onerror = (event: any) => {
         console.error('Speech recognition error thrown');
       };
 
+      recognition.onspeechend = (event: any) => {
+        recognition.stop();
+        console.log('Speech recognition has ended.');
+      }
+
       recognition.start();
+    };
+
+    const startSpeaking = () => {
+      if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(transcript);
+        utterance.lang = 'en-US';
+        window.speechSynthesis.speak(utterance);
+      } else {
+        alert('Text-to-speech not supported in this browser');
+      }
     };
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-24">
@@ -48,6 +70,9 @@ export default function Home() {
           Speech-to-text
         </button>
         <p className="mt-4 text-xl">{transcript || 'Waiting for speech...'}</p>
+        <button onClick={(startSpeaking)} className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+          Text-to-speech
+        </button>
       </div>
       <Link href='/calculator'>
         Calculator
