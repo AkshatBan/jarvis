@@ -1,7 +1,6 @@
 "use client"
 import Image from "next/image";
 import Link from "next/link";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { useEffect, useState, useRef } from "react";
 
 export default function Home() {
