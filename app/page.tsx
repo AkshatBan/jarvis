@@ -2,12 +2,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 
 export default function Home() {
     const [transcript, setTranscript] = useState('');
     const [message, setMessage] = useState<string>("Loading...");
-    const [micActive, setMicActive] = useState(false);
+    const recognition = useRef<any>(null);
 
     // Get message from user (speech-to-text)
     const startListening = () => {
@@ -17,17 +17,16 @@ export default function Home() {
         return;
       }
 
-      const recognition = new SpeechRecognition();
-      recognition.lang = 'en-US';
-      recognition.interimResults = false;
-      recognition.continuous = true;
+      recognition.current = new SpeechRecognition();
+      recognition.current.lang = 'en-US';
+      recognition.current.interimResults = false;
+      recognition.current.continuous = true;
 
-      recognition.onstart = (event: any) => {
-        setMicActive(true);
+      recognition.current.onstart = (event: any) => {
         console.log("Microphone is Active");
       }
 
-      recognition.onresult = (event: any) => {
+      recognition.current.onresult = (event: any) => {
         let fullTranscript = '';
         for (let i = 0; i < event.results.length; i++) {
           if (event.results[i].isFinal) {
@@ -39,22 +38,26 @@ export default function Home() {
         }
       };
 
-      recognition.onerror = (event: any) => {
+      recognition.current.onerror = (event: any) => {
         console.error('Speech recognition error thrown');
       };
 
-      recognition.onspeechend = (event: any) => {
-        setMicActive(false)
-        recognition.stop();
+      recognition.current.onspeechend = (event: any) => {
+        recognition.current.stop();
         console.log('Speech recognition has ended.');
       }
 
-      recognition.start();
+      recognition.current.start();
     };
 
     useEffect(() => {
-      if (transcript && !micActive) {
+      if (transcript) {
+        if (recognition.current){
+          recognition.current.stop();
+          console.log('Speech recognition has ended.');
+        }
         getMessage(transcript);
+        startListening();
       }
     }, [transcript]);
     
@@ -81,6 +84,12 @@ export default function Home() {
       if ('speechSynthesis' in window) {
         const utterance = new SpeechSynthesisUtterance(aiResponse);
         utterance.lang = 'en-US';
+
+        utterance.onend = () => {
+          console.log("Speech done. Restarting microphone...");
+          startListening();
+        }
+
         window.speechSynthesis.speak(utterance);
       } else {
         alert('Text-to-speech not supported in this browser');
@@ -89,13 +98,11 @@ export default function Home() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-24">
       <h1 className="text-white text-4xl mb-4">Welcome! Feel free to ask me questions!</h1>
-      <div className="w-auto h-auto">
-        <button onClick={(startListening)} className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-          Ask question
-        </button>
-        <p className="mt-4 text-xl">{transcript || 'Waiting for speech...'}</p>
-        <p className="mt-4 text-xl">{message}</p>
-      </div>
+      <button onClick={(startListening)} className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+        Ask question
+      </button>
+      <p className="mt-4 text-xl">Your prompt: {transcript || 'Waiting for speech...'}</p>
+      <p className="mt-4 text-xl">Google Gemini's Response: {message}</p>
     </main>
 
   );
