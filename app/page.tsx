@@ -1,23 +1,15 @@
 "use client"
 import Image from "next/image";
 import Link from "next/link";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { useEffect, useState } from "react";
 
 export default function Home() {
-    // Code for sending message to AI model
+    const [transcript, setTranscript] = useState('');
     const [message, setMessage] = useState<string>("Loading...");
-    async function getMessage() {
-        const response = await fetch("/api/sendMessage");
-        const data = await response.json()
-        setMessage(data.responseString)
-        return response;
-    }
-    useEffect(() => {
-        const response = getMessage();
-    })
+    const [micActive, setMicActive] = useState(false);
 
     // Get message from user (speech-to-text)
-    const [transcript, setTranscript] = useState('');
     const startListening = () => {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       if (!SpeechRecognition) {
@@ -29,6 +21,11 @@ export default function Home() {
       recognition.lang = 'en-US';
       recognition.interimResults = false;
       recognition.continuous = true;
+
+      recognition.onstart = (event: any) => {
+        setMicActive(true);
+        console.log("Microphone is Active");
+      }
 
       recognition.onresult = (event: any) => {
         let fullTranscript = '';
@@ -47,17 +44,42 @@ export default function Home() {
       };
 
       recognition.onspeechend = (event: any) => {
+        setMicActive(false)
         recognition.stop();
         console.log('Speech recognition has ended.');
       }
 
       recognition.start();
     };
+
+    useEffect(() => {
+      if (transcript && !micActive) {
+        getMessage(transcript);
+      }
+    }, [transcript]);
     
+    // Code for sending user's transcript to AI model
+    const getMessage = async (userTranscript: string) => {
+      try {
+        const response = await fetch('api/getMessage', {
+          method: "POST",
+          headers: {
+            'Content_Type': 'application/json',
+          },
+          body: JSON.stringify({ prompt:userTranscript + "Please do not add any emojis or special characters in your response." })
+        });
+        const data = await response.json();
+        setMessage(data.responseString);
+        startSpeaking(data.responseString);
+      } catch (error) {
+        console.error('Error fetching message:', error);
+      }
+    };
+
     // Give user message from AI model (text-to-speech)
-    const startSpeaking = () => {
+    const startSpeaking = (aiResponse: string) => {
       if ('speechSynthesis' in window) {
-        const utterance = new SpeechSynthesisUtterance(transcript);
+        const utterance = new SpeechSynthesisUtterance(aiResponse);
         utterance.lang = 'en-US';
         window.speechSynthesis.speak(utterance);
       } else {
@@ -66,16 +88,13 @@ export default function Home() {
     };
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-24">
-      {message}
       <h1 className="text-white text-4xl mb-4">Welcome! Feel free to ask me questions!</h1>
       <div className="w-auto h-auto">
         <button onClick={(startListening)} className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-          Speech-to-text
+          Ask question
         </button>
         <p className="mt-4 text-xl">{transcript || 'Waiting for speech...'}</p>
-        <button onClick={(startSpeaking)} className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-          Text-to-speech
-        </button>
+        <p className="mt-4 text-xl">{message}</p>
       </div>
     </main>
 
