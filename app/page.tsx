@@ -1,6 +1,7 @@
 "use client"
 import Image from "next/image";
 import Link from "next/link";
+import { handleClientScriptLoad } from "next/script";
 import { useEffect, useState, useRef } from "react";
 
 export default function Home() {
@@ -72,7 +73,9 @@ export default function Home() {
         });
         const data = await response.json();
         setMessage(data.responseString);
-        startSpeaking(data.responseString);
+        if (userTranscript.toLowerCase() !== "goodbye"){
+          startSpeaking(data.responseString);
+        }
       } catch (error) {
         console.error('Error fetching message:', error);
       }
@@ -94,6 +97,28 @@ export default function Home() {
         alert('Text-to-speech not supported in this browser');
       }
     };
+
+    // Keyboard interrupt to stop text to speech
+    const stopSpeaking = () => {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+        console.log('Speech manually cancelled.')
+      } else {
+        alert("Text-to-speech not supported in this browser");
+      }
+    };
+
+    useEffect(() => {
+      const handleKeyDown = (event: KeyboardEvent) => {
+        if (event.key === 'Escape') {
+          stopSpeaking();
+        }
+      }
+      window.addEventListener("keydown", handleKeyDown);
+      return () => {
+        window.removeEventListener("keydown", handleKeyDown);
+      };
+    }, []);
   return (
     <main className="flex min-h-screen flex-col items-center justify-between p-24">
       <h1 className="text-white text-4xl mb-4">Welcome! Feel free to ask me questions!</h1>
