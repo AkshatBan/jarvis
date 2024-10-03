@@ -73,7 +73,7 @@ export default function Home() {
         });
         const data = await response.json();
         setMessage(data.responseString);
-        if (userTranscript.toLowerCase() !== "goodbye"){
+        if (!userTranscript.toLowerCase().includes("goodbye")){
           startSpeaking(data.responseString);
         }
       } catch (error) {
